@@ -44,7 +44,6 @@ export default function Simulator() {
   const [copied, setCopied] = useState<string | null>(null);
   const [privateMode, setPrivateMode] = useState(false);
   const [handoffReady, setHandoffReady] = useState(false);
-  const [blockedTabs, setBlockedTabs] = useState(0);
   const [hint, setHint] = useState<IncognitoHint | null>(null);
 
   useEffect(() => {
@@ -65,6 +64,7 @@ export default function Simulator() {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
   const locationBoxRef = useRef<HTMLDivElement>(null);
+  const firstCtaRef = useRef<HTMLAnchorElement>(null);
 
   const suggestions = useMemo(
     () => (suggestOpen ? index.search(locationQuery, 8) : []),
@@ -179,45 +179,30 @@ export default function Simulator() {
     [resolvedLocation, domain, gl, hl, mode],
   );
 
-  const runSearch = useCallback(() => {
+  /**
+   * Incognito is the only path that still needs a handler: a page cannot open a
+   * private window, so it hands the URLs over through the clipboard instead.
+   * Everything else is a plain anchor, see below.
+   */
+  const copyForPrivateWindow = useCallback(() => {
     if (!ready) return;
     recordHistory(searches.map((s) => s.keyword));
+    void navigator.clipboard.writeText(searches.map((s) => s.url).join("\n")).catch(() => {});
+    setHandoffReady(true);
+  }, [ready, searches, recordHistory]);
 
+  // Enter in a text field triggers the first search, matching the button.
+  const submitFromField = useCallback(() => {
+    if (!ready) return;
     if (privateMode) {
-      // A page cannot open a private window, so hand the URLs over instead,
-      // one per line when there are several.
-      void navigator.clipboard.writeText(searches.map((s) => s.url).join("\n")).catch(() => {});
-      setHandoffReady(true);
+      copyForPrivateWindow();
       return;
     }
+    firstCtaRef.current?.click();
+  }, [ready, privateMode, copyForPrivateWindow]);
 
-    // Every open has to happen inside this one user gesture, otherwise the
-    // browser treats the later ones as unsolicited popups, so no awaiting here.
-    //
-    // The features string deliberately omits "noopener": with it, window.open
-    // is specified to always return null, which makes it impossible to tell a
-    // blocked popup from an opened one. Nulling `opener` on the handle severs
-    // the reference just the same, and it keeps the return value meaningful.
-    let blocked = 0;
-    for (const search of searches) {
-      const opened = window.open(search.url, "_blank");
-      if (opened) {
-        try {
-          opened.opener = null;
-        } catch {
-          // Cross origin handles can refuse the write; the tab is open either way.
-        }
-      } else {
-        blocked += 1;
-      }
-    }
-    setBlockedTabs(blocked);
-  }, [ready, privateMode, searches, recordHistory]);
-
-  // Any change to the query invalidates a pending handoff or warning.
   useEffect(() => {
     setHandoffReady(false);
-    setBlockedTabs(0);
   }, [built.url, privateMode, searches.length]);
 
   return (
@@ -229,7 +214,7 @@ export default function Simulator() {
             Keyword
           </StepLabel>
           <span className="label text-muted/70">
-            {multi ? `${searches.length} keywords, ${searches.length} tabs` : "comma separates them"}
+            {multi ? `${searches.length} keywords, ${searches.length} buttons` : `comma separates them, max ${MAX_KEYWORDS}`}
           </span>
         </div>
         <input
@@ -237,7 +222,7 @@ export default function Simulator() {
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") runSearch();
+            if (event.key === "Enter") submitFromField();
           }}
           placeholder="project management software, jira alternative"
           className="mt-2 w-full border border-ink/25 bg-white px-4 py-3 font-display text-xl font-bold tracking-tight outline-none placeholder:font-body placeholder:text-base placeholder:font-normal placeholder:text-muted/50 focus:border-ink focus-visible:outline-none sm:text-2xl"
@@ -256,7 +241,7 @@ export default function Simulator() {
         )}
         {parsed.truncated && (
           <p className="mt-2 text-sm text-muted">
-            Only the first {MAX_KEYWORDS} of {parsed.entered} will open.
+            Only the first {MAX_KEYWORDS} of {parsed.entered} keywords are used.
           </p>
         )}
 
@@ -314,7 +299,7 @@ export default function Simulator() {
               }}
               onKeyDown={(event) => {
                 if (!suggestions.length) {
-                  if (event.key === "Enter") runSearch();
+                  if (event.key === "Enter") submitFromField();
                   return;
                 }
                 if (event.key === "ArrowDown") {
@@ -470,35 +455,53 @@ export default function Simulator() {
             <span className="mt-1 block">
               Browsers do not let a page open one, so the button copies the URL and you paste it there
               yourself.{" "}
-              {multi && <span className="text-ink">Multiple keywords are copied as a list, not opened.</span>}
+              {multi && <span className="text-ink">All {searches.length} urls are copied as a list.</span>}
             </span>
           </span>
         </label>
 
-        <button
-          type="button"
-          onClick={runSearch}
-          disabled={!ready}
-          className="label mt-4 w-full border border-ink bg-accent px-4 py-4 transition hover:bg-ink hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted"
-        >
-          {privateMode
-            ? `Copy ${multi ? `${searches.length} urls` : "url"} for incognito →`
-            : `Open ${multi ? `${searches.length} tabs ` : ""}in Google →`}
-        </button>
-
-        {blockedTabs > 0 && (
-          <div className="mt-3 border border-ink bg-accent p-3 text-sm">
-            <p>
-              Your browser blocked {blockedTabs} of {searches.length} tabs. Allow pop ups for this
-              site, then try again. Most browsers show a blocked icon in the address bar.
-            </p>
-            <button
-              type="button"
-              onClick={() => copy(searches.map((s) => s.url).join("\n"), "blocked")}
-              className="label mt-2 underline decoration-ink/40 underline-offset-4"
-            >
-              {copied === "blocked" ? "copied" : `Copy all ${searches.length} urls instead`}
-            </button>
+        {privateMode ? (
+          <button
+            type="button"
+            onClick={copyForPrivateWindow}
+            disabled={!ready}
+            className="label mt-4 w-full border border-ink bg-accent px-4 py-4 transition hover:bg-ink hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted"
+          >
+            Copy {multi ? `${searches.length} urls` : "url"} for incognito →
+          </button>
+        ) : !ready ? (
+          <span className="label mt-4 block w-full cursor-not-allowed border border-line px-4 py-4 text-center text-muted">
+            Open in Google →
+          </span>
+        ) : (
+          /*
+           * Real anchors, not window.open. A pop up blocker stops a page from
+           * opening tabs by script, but never stops a person clicking a link,
+           * so one call to action per keyword is the only way several searches
+           * reliably open. It also gives middle click and cmd click for free.
+           */
+          <div className="mt-4 space-y-2">
+            {searches.map((search, i) => (
+              <a
+                key={search.keyword}
+                ref={i === 0 ? firstCtaRef : undefined}
+                href={search.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => recordHistory([search.keyword])}
+                className="label flex w-full items-center justify-between gap-3 border border-ink bg-accent px-4 py-4 transition hover:bg-ink hover:text-accent"
+              >
+                <span className="truncate">
+                  {multi ? `Open "${search.keyword}"` : "Open in Google"}
+                </span>
+                <span aria-hidden>→</span>
+              </a>
+            ))}
+            {multi && (
+              <p className="text-sm text-muted">
+                One tab each. Open them one by one, or middle click to keep this page in front.
+              </p>
+            )}
           </div>
         )}
 

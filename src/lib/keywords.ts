@@ -6,8 +6,11 @@
  * one deliberately.
  */
 
-/** Opening more than this at once is almost always a mistake, not a workflow. */
-export const MAX_KEYWORDS = 10;
+/**
+ * One call to action per keyword, so the limit is what still reads as a set of
+ * buttons rather than a list.
+ */
+export const MAX_KEYWORDS = 3;
 
 export type ParsedKeywords = {
   /** what will actually be opened, deduped and capped */
