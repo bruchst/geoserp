@@ -12,6 +12,7 @@ import {
 import { createLocationIndex, type Location } from "@/lib/locations";
 import { buildSearch, type SearchMode } from "@/lib/serpUrl";
 import { currentIncognitoHint, withArticle, type IncognitoHint } from "@/lib/incognito";
+import { MAX_KEYWORDS, parseKeywords } from "@/lib/keywords";
 import { resolveCanonical } from "@/lib/uule";
 import {
   addHistory,
@@ -33,7 +34,7 @@ const POPULAR = [
 ];
 
 export default function Simulator() {
-  const [keyword, setKeyword] = useState("best seo agency");
+  const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState(CZ.capital);
   const [domain, setDomain] = useState(CZ.domain);
   const [hl, setHl] = useState(CZ.hl);
@@ -43,6 +44,7 @@ export default function Simulator() {
   const [copied, setCopied] = useState<string | null>(null);
   const [privateMode, setPrivateMode] = useState(false);
   const [handoffReady, setHandoffReady] = useState(false);
+  const [blockedTabs, setBlockedTabs] = useState(0);
   const [hint, setHint] = useState<IncognitoHint | null>(null);
 
   useEffect(() => {
@@ -89,9 +91,23 @@ export default function Simulator() {
     [index, location, datasetTick],
   );
 
+  const parsed = useMemo(() => parseKeywords(keyword), [keyword]);
+
+  const searches = useMemo(
+    () =>
+      parsed.keywords.map((kw) => ({
+        keyword: kw,
+        ...buildSearch({ keyword: kw, location: resolvedLocation, domain, gl, hl, mode }),
+      })),
+    [parsed.keywords, resolvedLocation, domain, gl, hl, mode],
+  );
+
+  // The panel previews the first search; the rest differ only by the q param.
   const built = useMemo(
-    () => buildSearch({ keyword, location: resolvedLocation, domain, gl, hl, mode }),
-    [keyword, resolvedLocation, domain, gl, hl, mode],
+    () =>
+      searches[0] ??
+      buildSearch({ keyword: "", location: resolvedLocation, domain, gl, hl, mode }),
+    [searches, resolvedLocation, domain, gl, hl, mode],
   );
 
   const locationCountry = useMemo(() => {
@@ -103,7 +119,8 @@ export default function Simulator() {
   const localeMismatch =
     locationCountry && (locationCountry.gl !== gl || locationCountry.domain !== domain);
 
-  const ready = keyword.trim().length > 0 && resolvedLocation.length > 0;
+  const ready = searches.length > 0 && resolvedLocation.length > 0;
+  const multi = searches.length > 1;
   const datasetStatus = index.status;
 
   const applyCountry = useCallback((country: Country, withCapital = true) => {
@@ -139,45 +156,82 @@ export default function Simulator() {
     }
   }, []);
 
-  const recordHistory = useCallback(() => {
-    setHistory((current) =>
-      addHistory(current, {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        keyword: keyword.trim(),
-        location: resolvedLocation,
-        domain,
-        gl,
-        hl,
-        mode,
-        at: Date.now(),
-      }),
-    );
-  }, [keyword, resolvedLocation, domain, gl, hl, mode]);
+  const recordHistory = useCallback(
+    (keywords: string[]) => {
+      setHistory((current) => {
+        let next = current;
+        // Newest last so the first keyword ends up on top of the list.
+        for (const [i, kw] of [...keywords].reverse().entries()) {
+          next = addHistory(next, {
+            id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+            keyword: kw,
+            location: resolvedLocation,
+            domain,
+            gl,
+            hl,
+            mode,
+            at: Date.now(),
+          });
+        }
+        return next;
+      });
+    },
+    [resolvedLocation, domain, gl, hl, mode],
+  );
 
   const runSearch = useCallback(() => {
     if (!ready) return;
-    recordHistory();
+    recordHistory(searches.map((s) => s.keyword));
+
     if (privateMode) {
-      // A page cannot open a private window, so hand the URL over instead.
-      void navigator.clipboard.writeText(built.url).catch(() => {});
+      // A page cannot open a private window, so hand the URLs over instead,
+      // one per line when there are several.
+      void navigator.clipboard.writeText(searches.map((s) => s.url).join("\n")).catch(() => {});
       setHandoffReady(true);
       return;
     }
-    window.open(built.url, "_blank", "noopener,noreferrer");
-  }, [ready, privateMode, built.url, recordHistory]);
 
-  // Any change to the query invalidates a pending handoff.
+    // Every open has to happen inside this one user gesture, otherwise the
+    // browser treats the later ones as unsolicited popups, so no awaiting here.
+    //
+    // The features string deliberately omits "noopener": with it, window.open
+    // is specified to always return null, which makes it impossible to tell a
+    // blocked popup from an opened one. Nulling `opener` on the handle severs
+    // the reference just the same, and it keeps the return value meaningful.
+    let blocked = 0;
+    for (const search of searches) {
+      const opened = window.open(search.url, "_blank");
+      if (opened) {
+        try {
+          opened.opener = null;
+        } catch {
+          // Cross origin handles can refuse the write; the tab is open either way.
+        }
+      } else {
+        blocked += 1;
+      }
+    }
+    setBlockedTabs(blocked);
+  }, [ready, privateMode, searches, recordHistory]);
+
+  // Any change to the query invalidates a pending handoff or warning.
   useEffect(() => {
     setHandoffReady(false);
-  }, [built.url, privateMode]);
+    setBlockedTabs(0);
+  }, [built.url, privateMode, searches.length]);
 
   return (
     <div className="space-y-8">
       <div className="border border-line bg-paper-raised p-5 sm:p-8">
         {/* keyword */}
-        <StepLabel n="01" htmlFor="keyword">
-          Keyword
-        </StepLabel>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <StepLabel n="01" htmlFor="keyword">
+            Keyword
+          </StepLabel>
+          <span className="label text-muted/70">
+            {multi ? `${searches.length} keywords, ${searches.length} tabs` : "comma separates them"}
+          </span>
+        </div>
         <input
           id="keyword"
           value={keyword}
@@ -185,9 +239,26 @@ export default function Simulator() {
           onKeyDown={(event) => {
             if (event.key === "Enter") runSearch();
           }}
-          placeholder="project management software"
+          placeholder="project management software, jira alternative"
           className="mt-2 w-full border border-ink/25 bg-white px-4 py-3 font-display text-xl font-bold tracking-tight outline-none placeholder:font-body placeholder:text-base placeholder:font-normal placeholder:text-muted/50 focus:border-ink focus-visible:outline-none sm:text-2xl"
         />
+        {multi && (
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {searches.map((s) => (
+              <li
+                key={s.keyword}
+                className="border border-ink/20 bg-white px-1.5 py-0.5 font-mono text-[11px]"
+              >
+                {s.keyword}
+              </li>
+            ))}
+          </ul>
+        )}
+        {parsed.truncated && (
+          <p className="mt-2 text-sm text-muted">
+            Only the first {MAX_KEYWORDS} of {parsed.entered} will open.
+          </p>
+        )}
 
         {/* EU quick pick, the part Google actually honours */}
         <div className="mt-8">
@@ -398,7 +469,8 @@ export default function Simulator() {
             <span className="label ml-2 border border-ink/25 px-1 text-muted">one step more</span>
             <span className="mt-1 block">
               Browsers do not let a page open one, so the button copies the URL and you paste it there
-              yourself.
+              yourself.{" "}
+              {multi && <span className="text-ink">Multiple keywords are copied as a list, not opened.</span>}
             </span>
           </span>
         </label>
@@ -409,8 +481,26 @@ export default function Simulator() {
           disabled={!ready}
           className="label mt-4 w-full border border-ink bg-accent px-4 py-4 transition hover:bg-ink hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted"
         >
-          {privateMode ? "Copy url for incognito →" : "Open in Google →"}
+          {privateMode
+            ? `Copy ${multi ? `${searches.length} urls` : "url"} for incognito →`
+            : `Open ${multi ? `${searches.length} tabs ` : ""}in Google →`}
         </button>
+
+        {blockedTabs > 0 && (
+          <div className="mt-3 border border-ink bg-accent p-3 text-sm">
+            <p>
+              Your browser blocked {blockedTabs} of {searches.length} tabs. Allow pop ups for this
+              site, then try again. Most browsers show a blocked icon in the address bar.
+            </p>
+            <button
+              type="button"
+              onClick={() => copy(searches.map((s) => s.url).join("\n"), "blocked")}
+              className="label mt-2 underline decoration-ink/40 underline-offset-4"
+            >
+              {copied === "blocked" ? "copied" : `Copy all ${searches.length} urls instead`}
+            </button>
+          </div>
+        )}
 
         {privateMode && handoffReady && hint && (
           <div className="mt-3 border border-ink bg-accent p-4">
@@ -438,7 +528,9 @@ export default function Simulator() {
         {/* generated parameters */}
         <div className="mt-6 border-t border-line pt-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="label text-muted">Generated URL</span>
+            <span className="label text-muted">
+              Generated URL{multi ? ", first of " + searches.length : ""}
+            </span>
             <span className="label text-muted/70">pws=0, personalization off</span>
           </div>
           <p className="mt-2 max-h-24 overflow-auto bg-paper-inset p-3 font-mono text-[11px] leading-relaxed break-all">
@@ -447,10 +539,10 @@ export default function Simulator() {
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
             <button
               type="button"
-              onClick={() => copy(built.url, "url")}
+              onClick={() => copy(searches.map((s) => s.url).join("\n"), "url")}
               className="label text-muted underline decoration-line underline-offset-4 hover:text-ink"
             >
-              {copied === "url" ? "copied" : "copy url"}
+              {copied === "url" ? "copied" : multi ? `copy ${searches.length} urls` : "copy url"}
             </button>
             <button
               type="button"

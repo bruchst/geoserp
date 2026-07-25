@@ -9,6 +9,7 @@ import {
 import { COUNTRIES, EU_COUNTRIES } from "./countries";
 import { buildSearch } from "./serpUrl";
 import { detectIncognitoHint, withArticle } from "./incognito";
+import { MAX_KEYWORDS, parseKeywords } from "./keywords";
 import { addHistory, HISTORY_LIMIT, type HistoryEntry } from "./history";
 
 /**
@@ -348,5 +349,72 @@ describe("withArticle", () => {
     expect(withArticle("incognito window")).toBe("an incognito window");
     expect(withArticle("private window")).toBe("a private window");
     expect(withArticle("InPrivate window")).toBe("an InPrivate window");
+  });
+});
+
+describe("parseKeywords", () => {
+  it("splits on commas and trims", () => {
+    expect(parseKeywords("seo tool, jira alternative ,  crm").keywords).toEqual([
+      "seo tool",
+      "jira alternative",
+      "crm",
+    ]);
+  });
+
+  it("treats a single keyword as one search", () => {
+    expect(parseKeywords("project management software").keywords).toEqual([
+      "project management software",
+    ]);
+  });
+
+  it("ignores empty segments from trailing or doubled commas", () => {
+    expect(parseKeywords("a,,b,").keywords).toEqual(["a", "b"]);
+    expect(parseKeywords("   ").keywords).toEqual([]);
+  });
+
+  it("collapses inner whitespace", () => {
+    expect(parseKeywords("best   seo    agency").keywords).toEqual(["best seo agency"]);
+  });
+
+  it("dedupes case insensitively, keeping the first spelling", () => {
+    const parsed = parseKeywords("SEO tool, seo tool, Seo Tool");
+    expect(parsed.keywords).toEqual(["SEO tool"]);
+    expect(parsed.entered).toBe(1);
+  });
+
+  it("caps the list and reports that it did", () => {
+    const many = Array.from({ length: MAX_KEYWORDS + 4 }, (_, i) => `kw${i}`).join(",");
+    const parsed = parseKeywords(many);
+    expect(parsed.keywords).toHaveLength(MAX_KEYWORDS);
+    expect(parsed.entered).toBe(MAX_KEYWORDS + 4);
+    expect(parsed.truncated).toBe(true);
+  });
+
+  it("does not report truncation when the list fits", () => {
+    expect(parseKeywords("a,b,c").truncated).toBe(false);
+  });
+
+  it("produces one distinct search URL per keyword, sharing the other settings", () => {
+    const { keywords } = parseKeywords("alpha, beta");
+    const urls = keywords.map(
+      (kw) =>
+        buildSearch({
+          keyword: kw,
+          location: "Berlin,Berlin,Germany",
+          domain: "google.de",
+          gl: "de",
+          hl: "de",
+          mode: "organic",
+        }).url,
+    );
+    expect(urls[0]).toContain("q=alpha");
+    expect(urls[1]).toContain("q=beta");
+    expect(new Set(urls).size).toBe(2);
+    for (const url of urls) {
+      expect(url).toContain("gl=de");
+      expect(url).toContain("hl=de");
+      expect(url).toContain("pws=0");
+      expect(url).toContain("uule=w%2BCAIQICIVQmVybGluLEJlcmxpbixHZXJtYW55");
+    }
   });
 });
