@@ -214,9 +214,12 @@ export default function Simulator() {
         {/* location */}
         <div className="mt-8">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <StepLabel n="03" htmlFor="location">
-              City (uule), optional
-            </StepLabel>
+            <span className="flex items-baseline gap-2">
+              <StepLabel n="03" htmlFor="location">
+                City (uule), optional
+              </StepLabel>
+              <span className="label border border-ink/25 px-1 text-muted">for serp apis</span>
+            </span>
             <span className="label text-muted/70">
               {datasetStatus.ready
                 ? `${(datasetStatus.eu + datasetStatus.world).toLocaleString("en-US")} locations`
@@ -308,13 +311,6 @@ export default function Simulator() {
               );
             })}
           </div>
-          <p className="mt-3 border-l-2 border-accent pl-3 text-sm text-muted">
-            Tested on 2026-07-25: Google ignored <span className="font-mono text-xs">uule</span> in a
-            normal signed-in browser and used the IP address instead. Four different city values
-            returned an identical top 10. Treat the city as best effort in the browser, and use the
-            copied <span className="font-mono text-xs">uule</span> string with a SERP API when you
-            need city level certainty. Country and language below do change results.
-          </p>
         </div>
 
         {/* domain, language, mode */}
