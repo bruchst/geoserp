@@ -9,6 +9,10 @@ const FAQ = [
     a: "Incognito drops your cookies and sign-in state, so it removes history based personalization. It does not change your IP address, and location is the stronger signal of the two. Google still assumes you are searching from wherever your connection is.",
   },
   {
+    q: "Can the tool open the search in a private window for me?",
+    a: "No, and neither can any other website. There is no web API for opening an incognito or private window, and browsers block it deliberately: if a page could decide it runs in private mode, the mode would be meaningless. Only a browser extension can do it. Switch on the private window option and the button copies the URL and shows the exact shortcut for your browser instead, which makes it two steps rather than one. Worth knowing what it buys you: it clears cookies and your signed in state, but it does not change your IP address, and the IP is what Google reported as the source of the location in our tests.",
+  },
+  {
     q: "Why is a VPN not enough either?",
     a: "A VPN moves you to the exit node's city, usually a datacenter in a capital, not the town your customer lives in. The uule parameter targets a named place directly, so you can compare Brno against Ostrava without touching your connection.",
   },

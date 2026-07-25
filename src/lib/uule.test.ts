@@ -8,6 +8,7 @@ import {
 } from "./uule";
 import { COUNTRIES, EU_COUNTRIES } from "./countries";
 import { buildSearch } from "./serpUrl";
+import { detectIncognitoHint, withArticle } from "./incognito";
 import { addHistory, HISTORY_LIMIT, type HistoryEntry } from "./history";
 
 /**
@@ -263,5 +264,57 @@ describe("history", () => {
       list = addHistory(list, entry({ keyword: `q${i}` }));
     }
     expect(list).toHaveLength(HISTORY_LIMIT);
+  });
+});
+
+describe("incognito hints", () => {
+  const CHROME_MAC =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+  const FIREFOX_WIN =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0";
+  const EDGE_WIN =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0";
+  const SAFARI_MAC =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
+
+  it("uses the Cmd based shortcut on Apple platforms", () => {
+    const hint = detectIncognitoHint(CHROME_MAC, "MacIntel");
+    expect(hint).toEqual({
+      shortcut: "Shift + Cmd + N",
+      modeName: "incognito window",
+      browser: "Chrome",
+    });
+  });
+
+  it("uses Ctrl and the P key for Firefox on Windows", () => {
+    const hint = detectIncognitoHint(FIREFOX_WIN, "Win32");
+    expect(hint.shortcut).toBe("Ctrl + Shift + P");
+    expect(hint.browser).toBe("Firefox");
+  });
+
+  it("detects Edge before Chrome, since Edge's UA contains both", () => {
+    expect(detectIncognitoHint(EDGE_WIN, "Win32")).toEqual({
+      shortcut: "Ctrl + Shift + N",
+      modeName: "InPrivate window",
+      browser: "Edge",
+    });
+  });
+
+  it("detects Safari", () => {
+    expect(detectIncognitoHint(SAFARI_MAC, "MacIntel").browser).toBe("Safari");
+  });
+
+  it("falls back without guessing a browser name", () => {
+    const hint = detectIncognitoHint("SomeUnknownBrowser/1.0", "Linux x86_64");
+    expect(hint.browser).toBe("your browser");
+    expect(hint.shortcut).toBe("Ctrl + Shift + N");
+  });
+});
+
+describe("withArticle", () => {
+  it("picks the article that matches the mode name", () => {
+    expect(withArticle("incognito window")).toBe("an incognito window");
+    expect(withArticle("private window")).toBe("a private window");
+    expect(withArticle("InPrivate window")).toBe("an InPrivate window");
   });
 });

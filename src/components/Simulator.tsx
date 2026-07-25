@@ -11,6 +11,7 @@ import {
 } from "@/lib/countries";
 import { createLocationIndex, type Location } from "@/lib/locations";
 import { buildSearch, type SearchMode } from "@/lib/serpUrl";
+import { currentIncognitoHint, withArticle, type IncognitoHint } from "@/lib/incognito";
 import { resolveCanonical } from "@/lib/uule";
 import {
   addHistory,
@@ -40,6 +41,13 @@ export default function Simulator() {
   const [mode, setMode] = useState<SearchMode>("organic");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
+  const [privateMode, setPrivateMode] = useState(false);
+  const [handoffReady, setHandoffReady] = useState(false);
+  const [hint, setHint] = useState<IncognitoHint | null>(null);
+
+  useEffect(() => {
+    setHint(currentIncognitoHint());
+  }, []);
 
   const index = useMemo(() => createLocationIndex(), []);
   const [datasetTick, setDatasetTick] = useState(0);
@@ -131,8 +139,7 @@ export default function Simulator() {
     }
   }, []);
 
-  const runSearch = useCallback(() => {
-    if (!ready) return;
+  const recordHistory = useCallback(() => {
     setHistory((current) =>
       addHistory(current, {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -145,8 +152,24 @@ export default function Simulator() {
         at: Date.now(),
       }),
     );
+  }, [keyword, resolvedLocation, domain, gl, hl, mode]);
+
+  const runSearch = useCallback(() => {
+    if (!ready) return;
+    recordHistory();
+    if (privateMode) {
+      // A page cannot open a private window, so hand the URL over instead.
+      void navigator.clipboard.writeText(built.url).catch(() => {});
+      setHandoffReady(true);
+      return;
+    }
     window.open(built.url, "_blank", "noopener,noreferrer");
-  }, [ready, keyword, resolvedLocation, domain, gl, hl, mode, built.url]);
+  }, [ready, privateMode, built.url, recordHistory]);
+
+  // Any change to the query invalidates a pending handoff.
+  useEffect(() => {
+    setHandoffReady(false);
+  }, [built.url, privateMode]);
 
   return (
     <div className="space-y-8">
@@ -364,14 +387,52 @@ export default function Simulator() {
           </button>
         )}
 
+        {/* private window handoff */}
+        <div className="mt-6 border border-ink/15 bg-paper-inset/60 p-3">
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={privateMode}
+              onChange={(event) => setPrivateMode(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[color:var(--ink)]"
+            />
+            <span>
+              <span className="label">
+                Use {withArticle(hint?.modeName ?? "private window")}
+              </span>
+              <span className="mt-1 block text-sm text-muted">
+                A page cannot open one for you, browsers block that on purpose. Switch this on and the
+                button copies the URL and shows you the shortcut instead. It clears cookies and your
+                signed in state, but not your IP address.
+              </span>
+            </span>
+          </label>
+        </div>
+
         <button
           type="button"
           onClick={runSearch}
           disabled={!ready}
-          className="label mt-8 w-full border border-ink bg-accent px-4 py-4 transition hover:bg-ink hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted"
+          className="label mt-4 w-full border border-ink bg-accent px-4 py-4 transition hover:bg-ink hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted"
         >
-          Open simulated google search →
+          {privateMode ? "Copy url for a private window" : "Open simulated google search →"}
         </button>
+
+        {privateMode && handoffReady && hint && (
+          <div className="mt-3 border border-ink bg-accent p-4">
+            <p className="label">URL copied</p>
+            <ol className="mt-2 space-y-1 text-sm">
+              <li>
+                1. Press{" "}
+                <kbd className="border border-ink/40 bg-white px-1.5 py-0.5 font-mono text-xs">
+                  {hint.shortcut}
+                </kbd>{" "}
+                to open {withArticle(hint.modeName)} in {hint.browser}.
+              </li>
+              <li>2. Paste and press Enter.</li>
+            </ol>
+          </div>
+        )}
 
         {/* generated parameters */}
         <div className="mt-6 border-t border-line pt-5">
