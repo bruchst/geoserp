@@ -1,3 +1,4 @@
+import BeforeAfter from "@/components/BeforeAfter";
 import Simulator from "@/components/Simulator";
 import { EU_COUNTRIES } from "@/lib/countries";
 import stats from "@/lib/locations-stats.json";
@@ -37,7 +38,7 @@ export default function Home() {
   const version = stats.source.replace("geotargets-", "").replace(".csv", "");
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-5 py-8 sm:px-8 sm:py-12">
+    <div className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
       {/* masthead */}
       <header>
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
@@ -49,104 +50,49 @@ export default function Home() {
         <div className="mt-4 border-t border-line" />
       </header>
 
-      {/* intro */}
-      <section className="py-10 sm:py-14">
-        <h1 className="max-w-2xl font-display text-4xl leading-[1.08] font-extrabold tracking-tight sm:text-5xl">
-          See Google the way another country sees it.
-        </h1>
-        <p className="mt-5 max-w-xl text-lg text-muted">
-          Pick a keyword and a country. You get an unpersonalized Google SERP on that country&apos;s
-          own domain, in its own language. All {EU_COUNTRIES.length} EU member states, no VPN, no
-          extension, no account.
-        </p>
-        <p className="label mt-5 text-muted">
-          {EU_COUNTRIES.length}/27 EU · {stats.total.toLocaleString("en-US")} cities for uule · runs in
-          your browser
-        </p>
-        <p className="mt-6 max-w-xl border-l-2 border-accent pl-4 text-sm text-muted">
-          <span className="font-bold text-ink">Honest about the city level.</span> Every tool in this
-          category promises results from any city through the{" "}
-          <span className="font-mono text-xs">uule</span> parameter. Tested on 2026-07-25 in a normal
-          signed-in browser, Google ignored it and used the IP address instead: Brno, Ostrava, Pilsen
-          and no city at all returned an identical top 10. Country and language do work, and they are
-          verifiable. So that is what this tool leads with.
-        </p>
+      {/* hero: pitch left, tool right, both above the fold */}
+      <section className="grid items-start gap-10 py-8 sm:py-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-12">
+        <div className="lg:sticky lg:top-8">
+          <h1 className="font-display text-4xl leading-[1.06] font-extrabold tracking-tight sm:text-5xl">
+            See Google the way another country sees it.
+          </h1>
+          <p className="mt-5 text-lg text-muted">
+            Pick a keyword and a country. You get an unpersonalized Google SERP on that
+            country&apos;s own domain, in its own language. All {EU_COUNTRIES.length} EU member
+            states, no VPN, no extension, no account.
+          </p>
+          <ul className="mt-6 space-y-2 text-sm">
+            {[
+              `All ${EU_COUNTRIES.length} EU member states, each in its own language`,
+              `${stats.total.toLocaleString("en-US")} cities from Google's own location list`,
+              "Personalization off, so you see the ranking, not your history",
+              "Runs in your browser. No account, no database, no tracking",
+            ].map((item) => (
+              <li key={item} className="flex gap-2.5">
+                <span aria-hidden className="text-accent">
+                  ▸
+                </span>
+                <span className="text-muted">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <Simulator />
       </section>
 
-      <Simulator />
-
-      {/* proof: what the same keyword returns in three countries */}
-      <section className="mt-14 border-t border-line pt-8">
-        <h2 className="font-display text-2xl font-bold tracking-tight">What this actually changes</h2>
+      {/* before / after */}
+      <section className="mt-8 border-t border-line pt-8">
+        <h2 className="font-display text-2xl font-bold tracking-tight">
+          Same keyword, different country, different winners
+        </h2>
         <p className="mt-2 max-w-2xl text-muted">
-          One keyword, <span className="font-mono text-sm">project management software</span>, three
-          countries, measured on 2026-07-25 from the same machine. Highlighted hosts appear in that
-          country only.
+          One query, <span className="font-mono text-sm">project management software</span>, measured
+          on 2026-07-25 from the same machine one minute apart.
         </p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {[
-            {
-              flag: "🇩🇪",
-              country: "Germany",
-              params: "google.de · gl=de · hl=de",
-              hosts: [
-                ["projektmagazin.de", true],
-                ["openproject.org", true],
-                ["asana.com", false],
-                ["fuer-gruender.de", true],
-                ["atlassian.com", false],
-              ] as [string, boolean][],
-            },
-            {
-              flag: "🇵🇱",
-              country: "Poland",
-              params: "google.pl · gl=pl · hl=pl",
-              hosts: [
-                ["icagile.com", false],
-                ["project-management.com", false],
-                ["flexi-project.com", true],
-                ["asana.com", false],
-                ["wrike.com", false],
-              ] as [string, boolean][],
-            },
-            {
-              flag: "🇺🇸",
-              country: "United States",
-              params: "google.com · gl=us · hl=en",
-              hosts: [
-                ["icagile.com", false],
-                ["project-management.com", false],
-                ["paymoapp.com", true],
-                ["microsoft.com", true],
-                ["wrike.com", false],
-              ] as [string, boolean][],
-            },
-          ].map((col) => (
-            <div key={col.country} className="border border-line bg-paper-raised p-4">
-              <p className="font-display text-lg font-bold">
-                <span aria-hidden className="mr-1.5">
-                  {col.flag}
-                </span>
-                {col.country}
-              </p>
-              <p className="mt-1 font-mono text-[10px] tracking-wide text-muted">{col.params}</p>
-              <ol className="mt-3 space-y-1.5">
-                {col.hosts.map(([host, unique], i) => (
-                  <li key={host} className="flex gap-2 font-mono text-[11px]">
-                    <span className="w-3 shrink-0 text-muted/60">{i + 1}</span>
-                    <span className={unique ? "bg-accent px-1 font-semibold" : "text-muted"}>
-                      {host}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ))}
+        <div className="mt-6">
+          <BeforeAfter />
         </div>
-        <p className="mt-4 text-sm text-muted">
-          Three of five results differ between Germany and the United States for the same query. That
-          is the gap between what you see at your desk and what your market sees.
-        </p>
       </section>
 
       {/* how it works */}
@@ -174,47 +120,6 @@ export default function Home() {
             </li>
           ))}
         </ol>
-      </section>
-
-      {/* under the hood */}
-      <section className="mt-14 border-t border-line pt-8">
-        <h2 className="font-display text-2xl font-bold tracking-tight">Under the hood</h2>
-        <div className="mt-5 grid gap-8 sm:grid-cols-2">
-          <div>
-            <p className="text-muted">Google takes the search location from the URL itself:</p>
-            <dl className="mt-4 space-y-2 text-sm">
-              {[
-                ["gl", "country of the search, gl=cz. Works."],
-                ["hl", "interface and results language, hl=cs. Works."],
-                ["pws=0", "personalization off. Works, Google confirms it in the footer."],
-                ["tbm=lcl", "local pack and Maps listings."],
-                ["uule", "encoded city. Ignored by the browser, useful for SERP APIs."],
-              ].map(([key, description]) => (
-                <div key={key} className="flex gap-3">
-                  <dt className="w-16 shrink-0 font-mono text-xs">{key}</dt>
-                  <dd className="text-muted">{description}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-          <div>
-            <p className="label text-muted">The uule payload</p>
-            <pre className="mt-2 overflow-x-auto bg-paper-inset p-3 font-mono text-[11px] leading-relaxed">
-{`uule = "w+" + base64(
-  0x08 0x02          role = 2
-  0x10 0x20          producer = 32
-  0x22 <varint len>
-  utf8(canonical name)
-)`}
-            </pre>
-            <p className="mt-3 text-sm text-muted">
-              The shortcut copied around the web glues a fixed prefix onto a single length character,
-              which only holds up to 63 bytes. Google&apos;s own list goes further: the longest Greek
-              municipality name runs 119 bytes, and accented names need the length counted in UTF-8
-              bytes. GeoSERP builds the real payload, so those work too.
-            </p>
-          </div>
-        </div>
       </section>
 
       {/* faq */}

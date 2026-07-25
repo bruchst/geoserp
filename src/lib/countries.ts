@@ -89,7 +89,7 @@ export function countryByCode(code: string | undefined): Country | undefined {
 
 /** Every Google domain we offer, for the domain <select>. */
 export const GOOGLE_DOMAINS = Array.from(
-  new Map(COUNTRIES.map((c) => [c.domain, `${c.domain} (${c.name})`])).entries(),
+  new Map(COUNTRIES.map((c) => [c.domain, `${c.domain} (${c.code})`])).entries(),
 ).sort((a, b) => (a[0] === "google.com" ? -1 : b[0] === "google.com" ? 1 : a[0].localeCompare(b[0])));
 
 /** Languages offered in the hl <select>, deduped from the country table plus extras. */

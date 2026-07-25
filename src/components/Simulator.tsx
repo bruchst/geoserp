@@ -152,9 +152,9 @@ export default function Simulator() {
     <div className="space-y-8">
       <div className="border border-line bg-paper-raised p-5 sm:p-8">
         {/* keyword */}
-        <label htmlFor="keyword" className="label block text-muted">
+        <StepLabel n="01" htmlFor="keyword">
           Keyword
-        </label>
+        </StepLabel>
         <input
           id="keyword"
           value={keyword}
@@ -169,7 +169,7 @@ export default function Simulator() {
         {/* EU quick pick, the part Google actually honours */}
         <div className="mt-8">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="label text-muted">Country</span>
+            <StepLabel n="02">Country</StepLabel>
             <span className="label text-muted/70">sets gl, its language, its domain</span>
           </div>
           <div className="mt-2 space-y-2">
@@ -191,9 +191,9 @@ export default function Simulator() {
         {/* location */}
         <div className="mt-8">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <label htmlFor="location" className="label text-muted">
-              City (uule)
-            </label>
+            <StepLabel n="03" htmlFor="location">
+              City (uule), optional
+            </StepLabel>
             <span className="label text-muted/70">
               {datasetStatus.ready
                 ? `${(datasetStatus.eu + datasetStatus.world).toLocaleString("en-US")} locations`
@@ -260,18 +260,15 @@ export default function Simulator() {
             )}
           </div>
 
+          {/* Only the actionable state gets called out. A "this is fine" badge on
+              every canonical pick was pure noise. */}
+          {datasetStatus.ready && resolvedLocation.length > 0 && !isCanonical && (
+            <p className="mt-2 border-l-2 border-accent pl-3 text-sm">
+              Not one of Google&apos;s canonical names. It still encodes, but Google may not resolve
+              it. Pick from the list to be sure.
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            {datasetStatus.ready && resolvedLocation.length > 0 && (
-              <span
-                className={`label border px-2 py-0.5 ${
-                  isCanonical
-                    ? "border-ink/25 text-muted"
-                    : "border-ink bg-accent text-ink"
-                }`}
-              >
-                {isCanonical ? "verified google location" : "free text"}
-              </span>
-            )}
             {POPULAR.map((p) => {
               const active = resolvedLocation === p.canonical;
               return (
@@ -298,7 +295,10 @@ export default function Simulator() {
         </div>
 
         {/* domain, language, mode */}
-        <div className="mt-8 grid gap-6 sm:grid-cols-3">
+        <div className="mt-8">
+          <StepLabel n="04">Fine tune</StepLabel>
+        </div>
+        <div className="mt-2 grid gap-6 sm:grid-cols-3">
           <div>
             <label htmlFor="domain" className="label block text-muted">
               Domain
@@ -331,14 +331,14 @@ export default function Simulator() {
               {(
                 [
                   { value: "organic", label: "Organic" },
-                  { value: "local", label: "Local pack" },
+                  { value: "local", label: "Google Maps" },
                 ] as const
               ).map((option, i) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setMode(option.value)}
-                  className={`flex-1 border border-ink/25 px-2 py-2.5 font-mono text-xs transition ${
+                  className={`flex-1 border border-ink/25 px-1.5 py-2.5 font-mono text-[10px] whitespace-nowrap transition ${
                     i === 1 ? "border-l-0" : ""
                   } ${
                     mode === option.value
@@ -381,10 +381,6 @@ export default function Simulator() {
           </div>
           <p className="mt-2 max-h-24 overflow-auto bg-paper-inset p-3 font-mono text-[11px] leading-relaxed break-all">
             {built.url}
-          </p>
-          <p className="mt-2 text-sm text-muted">
-            On the opened page, scroll to the very bottom. Google prints the location it actually
-            used, and whether it came from your IP address. That line is the only honest check.
           </p>
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
             <button
@@ -456,6 +452,30 @@ export default function Simulator() {
         </div>
       )}
     </div>
+  );
+}
+
+function StepLabel({
+  n,
+  htmlFor,
+  children,
+}: {
+  n: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  const content = (
+    <>
+      <span className="mr-2 bg-ink px-1.5 py-0.5 text-paper">{n}</span>
+      {children}
+    </>
+  );
+  return htmlFor ? (
+    <label htmlFor={htmlFor} className="label block text-muted">
+      {content}
+    </label>
+  ) : (
+    <span className="label block text-muted">{content}</span>
   );
 }
 
