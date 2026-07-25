@@ -431,6 +431,13 @@ export default function Simulator() {
               </li>
               <li>2. Paste and press Enter.</li>
             </ol>
+            <p className="mt-2 text-xs text-ink/70">
+              On {hint.otherPlatform} it is{" "}
+              <kbd className="border border-ink/30 bg-white/60 px-1 py-0.5 font-mono text-[10px]">
+                {hint.otherShortcut}
+              </kbd>
+              .
+            </p>
           </div>
         )}
 

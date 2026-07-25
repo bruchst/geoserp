@@ -7,50 +7,70 @@
  * browser extension (chrome.windows.create with incognito: true) can do it,
  * which a static site is not.
  *
- * So the honest implementation is a two step handoff: copy the URL, then tell
- * the user the exact shortcut for the browser they are actually using.
+ * So the honest implementation is a two step handoff: copy the URL, then show
+ * the exact shortcut for the browser the visitor is actually using. Detection
+ * runs per visitor in their own browser, so a Windows visitor sees the Ctrl
+ * shortcut and a Mac visitor sees the Cmd one. Because user agent sniffing can
+ * always be wrong, `otherShortcut` carries the opposite platform's shortcut so
+ * the UI can show a fallback rather than leaving anyone stuck.
  */
 
 export type IncognitoHint = {
   /** e.g. "Shift + Cmd + N" */
   shortcut: string;
+  /** the same browser's shortcut on the other platform family */
+  otherShortcut: string;
+  /** label for that other platform, e.g. "Windows and Linux" */
+  otherPlatform: string;
   /** what that browser calls the mode */
   modeName: string;
   browser: string;
 };
 
-const DEFAULT: IncognitoHint = {
-  shortcut: "Ctrl + Shift + N",
-  modeName: "incognito window",
+type BrowserProfile = { key: string; modeName: string; browser: string };
+
+const PROFILES: { test: RegExp; profile: BrowserProfile }[] = [
+  // Order matters: Edge, Opera and Brave all carry "chrome" in the UA.
+  { test: /edg\//, profile: { key: "N", modeName: "InPrivate window", browser: "Edge" } },
+  { test: /opr\//, profile: { key: "N", modeName: "private window", browser: "Opera" } },
+  { test: /firefox\//, profile: { key: "P", modeName: "private window", browser: "Firefox" } },
+  { test: /chrome\//, profile: { key: "N", modeName: "incognito window", browser: "Chrome" } },
+  { test: /safari\//, profile: { key: "N", modeName: "private window", browser: "Safari" } },
+];
+
+const FALLBACK_PROFILE: BrowserProfile = {
+  key: "N",
+  modeName: "private window",
   browser: "your browser",
 };
 
-/**
- * Best effort detection from the user agent. Only used to show a keyboard
- * shortcut, so a wrong guess costs the user nothing but a glance.
- */
-export function detectIncognitoHint(userAgent: string, platform: string): IncognitoHint {
-  const ua = userAgent.toLowerCase();
-  const isApple = /mac|iphone|ipad/.test(platform.toLowerCase()) || /mac os x/.test(ua);
-  const mod = isApple ? "Shift + Cmd" : "Ctrl + Shift";
+function build(profile: BrowserProfile, isApple: boolean): IncognitoHint {
+  return {
+    shortcut: `${isApple ? "Shift + Cmd" : "Ctrl + Shift"} + ${profile.key}`,
+    otherShortcut: `${isApple ? "Ctrl + Shift" : "Shift + Cmd"} + ${profile.key}`,
+    otherPlatform: isApple ? "Windows and Linux" : "macOS",
+    modeName: profile.modeName,
+    browser: profile.browser,
+  };
+}
 
-  // Order matters: Edge, Opera and Brave all contain "chrome" in the UA.
-  if (/edg\//.test(ua)) {
-    return { shortcut: `${mod} + N`, modeName: "InPrivate window", browser: "Edge" };
-  }
-  if (/opr\//.test(ua)) {
-    return { shortcut: `${mod} + N`, modeName: "private window", browser: "Opera" };
-  }
-  if (/firefox\//.test(ua)) {
-    return { shortcut: `${mod} + P`, modeName: "private window", browser: "Firefox" };
-  }
-  if (/chrome\//.test(ua)) {
-    return { shortcut: `${mod} + N`, modeName: "incognito window", browser: "Chrome" };
-  }
-  if (/safari\//.test(ua)) {
-    return { shortcut: `${mod} + N`, modeName: "private window", browser: "Safari" };
-  }
-  return { ...DEFAULT, shortcut: `${mod} + N` };
+/**
+ * `platformHint` should be `navigator.userAgentData.platform` when available
+ * ("macOS", "Windows", "Linux"), since it survives user agent reduction.
+ * Falls back to the legacy `navigator.platform` string, then to the UA itself.
+ */
+export function detectIncognitoHint(
+  userAgent: string,
+  platformHint: string,
+): IncognitoHint {
+  const ua = userAgent.toLowerCase();
+  const platform = platformHint.toLowerCase();
+  const isApple =
+    /mac|iphone|ipad|ios/.test(platform) ||
+    (platform === "" && /mac os x|iphone|ipad/.test(ua));
+
+  const match = PROFILES.find(({ test }) => test.test(ua));
+  return build(match?.profile ?? FALLBACK_PROFILE, isApple);
 }
 
 /** "an incognito window" vs "a private window". */
@@ -59,6 +79,11 @@ export function withArticle(modeName: string): string {
 }
 
 export function currentIncognitoHint(): IncognitoHint {
-  if (typeof navigator === "undefined") return DEFAULT;
-  return detectIncognitoHint(navigator.userAgent, navigator.platform ?? "");
+  if (typeof navigator === "undefined") {
+    return build(FALLBACK_PROFILE, false);
+  }
+  const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } })
+    .userAgentData;
+  const platformHint = uaData?.platform ?? navigator.platform ?? "";
+  return detectIncognitoHint(navigator.userAgent, platformHint);
 }

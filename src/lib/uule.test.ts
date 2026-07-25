@@ -270,6 +270,8 @@ describe("history", () => {
 describe("incognito hints", () => {
   const CHROME_MAC =
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+  const CHROME_WIN =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
   const FIREFOX_WIN =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0";
   const EDGE_WIN =
@@ -277,37 +279,67 @@ describe("incognito hints", () => {
   const SAFARI_MAC =
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
 
-  it("uses the Cmd based shortcut on Apple platforms", () => {
-    const hint = detectIncognitoHint(CHROME_MAC, "MacIntel");
-    expect(hint).toEqual({
+  it("gives Mac visitors the Cmd shortcut", () => {
+    expect(detectIncognitoHint(CHROME_MAC, "macOS")).toEqual({
       shortcut: "Shift + Cmd + N",
+      otherShortcut: "Ctrl + Shift + N",
+      otherPlatform: "Windows and Linux",
       modeName: "incognito window",
       browser: "Chrome",
     });
   });
 
-  it("uses Ctrl and the P key for Firefox on Windows", () => {
-    const hint = detectIncognitoHint(FIREFOX_WIN, "Win32");
-    expect(hint.shortcut).toBe("Ctrl + Shift + P");
-    expect(hint.browser).toBe("Firefox");
-  });
-
-  it("detects Edge before Chrome, since Edge's UA contains both", () => {
-    expect(detectIncognitoHint(EDGE_WIN, "Win32")).toEqual({
+  it("gives Windows visitors the Ctrl shortcut for the same browser", () => {
+    expect(detectIncognitoHint(CHROME_WIN, "Windows")).toEqual({
       shortcut: "Ctrl + Shift + N",
-      modeName: "InPrivate window",
-      browser: "Edge",
+      otherShortcut: "Shift + Cmd + N",
+      otherPlatform: "macOS",
+      modeName: "incognito window",
+      browser: "Chrome",
     });
   });
 
-  it("detects Safari", () => {
-    expect(detectIncognitoHint(SAFARI_MAC, "MacIntel").browser).toBe("Safari");
+  it("gives Linux visitors the Ctrl shortcut", () => {
+    expect(detectIncognitoHint(CHROME_WIN, "Linux").shortcut).toBe("Ctrl + Shift + N");
   });
 
-  it("falls back without guessing a browser name", () => {
-    const hint = detectIncognitoHint("SomeUnknownBrowser/1.0", "Linux x86_64");
-    expect(hint.browser).toBe("your browser");
+  it("uses the P key for Firefox, on both platforms", () => {
+    expect(detectIncognitoHint(FIREFOX_WIN, "Windows").shortcut).toBe("Ctrl + Shift + P");
+    expect(detectIncognitoHint(FIREFOX_WIN, "macOS").shortcut).toBe("Shift + Cmd + P");
+  });
+
+  it("detects Edge before Chrome, since Edge's UA contains both", () => {
+    const hint = detectIncognitoHint(EDGE_WIN, "Windows");
+    expect(hint.browser).toBe("Edge");
+    expect(hint.modeName).toBe("InPrivate window");
     expect(hint.shortcut).toBe("Ctrl + Shift + N");
+  });
+
+  it("detects Safari", () => {
+    expect(detectIncognitoHint(SAFARI_MAC, "macOS").browser).toBe("Safari");
+  });
+
+  it("falls back to the user agent when no platform hint is available", () => {
+    expect(detectIncognitoHint(CHROME_MAC, "").shortcut).toBe("Shift + Cmd + N");
+    expect(detectIncognitoHint(CHROME_WIN, "").shortcut).toBe("Ctrl + Shift + N");
+  });
+
+  it("never leaves a visitor without an alternative shortcut", () => {
+    for (const [ua, platform] of [
+      [CHROME_MAC, "macOS"],
+      [CHROME_WIN, "Windows"],
+      [FIREFOX_WIN, "Linux"],
+      ["SomeUnknownBrowser/1.0", ""],
+    ] as [string, string][]) {
+      const hint = detectIncognitoHint(ua, platform);
+      expect(hint.shortcut).not.toBe(hint.otherShortcut);
+      expect(hint.otherShortcut).toMatch(/^(Ctrl \+ Shift|Shift \+ Cmd) \+ [NP]$/);
+      expect(hint.otherPlatform.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("does not invent a browser name it cannot detect", () => {
+    expect(detectIncognitoHint("SomeUnknownBrowser/1.0", "Linux").browser).toBe("your browser");
   });
 });
 
