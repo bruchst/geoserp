@@ -1,0 +1,11 @@
+{
+  "euRows": 32894,
+  "worldRows": 55550,
+  "total": 88444,
+  "euCountries": 27,
+  "skippedInactive": 2938,
+  "skippedType": 181955,
+  "skippedDuplicate": 329,
+  "skippedPipe": 0,
+  "source": "geotargets.csv"
+}

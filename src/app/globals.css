@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/* Palette and type lifted from sbruch.com: cream paper, ink text,
+   one yellow accent, square corners, hairline rules. */
+:root {
+  --paper: #f1e6cf;
+  --paper-raised: #f7f0e1;
+  --paper-inset: #e9dcbe;
+  --ink: #141211;
+  --muted: #4a4540;
+  --line: #cfc0a0;
+  --line-strong: #141211;
+  --accent: #ffcf33;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-inset: var(--paper-inset);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --font-display: var(--font-bodoni);
+  --font-body: var(--font-caslon);
+  --font-mono: var(--font-jetbrains);
+  --radius-none: 0px;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-caslon), Georgia, serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-bodoni), Georgia, serif;
+}
+
+/* Small caps labels, the sbruch.com signature */
+.label {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+select option {
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
