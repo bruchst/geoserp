@@ -25,6 +25,10 @@ const FAQ = [
     a: "Not in a normal browser, as of a test on 2026-07-25. Searching the same query on google.cz from a Prague IP with uule values for Brno, Ostrava and Pilsen returned an identical top 10, and Google's own footer said the location came from the IP address. Both uule forms behaved the same, the named city form and the coordinate form. Country level targeting through gl, hl and the local domain does change results, clearly and repeatably. If you need city level certainty, copy the uule string and pass it to a SERP API, where requests carry no browser location state.",
   },
   {
+    q: "Why does my own country behave differently from the others?",
+    a: "Because Google resolves the country and the city separately. The country comes from gl, and it works. The city inside that country comes from your IP address, and Google only applies it when your IP is actually in the country you are searching. So searching your own country always pins the results to your own city, and the city field cannot override it. Searching any other country makes the footer read that the location is unknown, which is the cleaner case: national results with no city bias at all. Measured on 2026-07-25 from a Prague connection: gl=cz reported Holešovice, Praha 7 from the IP address, while gl=it reported Sconosciuta and gl=us reported Unknown.",
+  },
+  {
     q: "How do I check what location Google used?",
     a: "Scroll to the bottom of the results page. Google prints the location it applied and whether it came from your IP address. If it names your own city while you asked for another one, the location was not applied. That footer line is the only reliable check, in this tool or any other.",
   },

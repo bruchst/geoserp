@@ -6,9 +6,10 @@ import {
   resolveCanonical,
   varint,
 } from "./uule";
-import { COUNTRIES, EU_COUNTRIES } from "./countries";
+import { COUNTRIES, EU_COUNTRIES, countryWithArticle } from "./countries";
 import { buildSearch } from "./serpUrl";
 import { detectIncognitoHint, withArticle } from "./incognito";
+import { countryFromTimeZone } from "./homeCountry";
 import { MAX_KEYWORDS, parseKeywords } from "./keywords";
 import { addHistory, HISTORY_LIMIT, type HistoryEntry } from "./history";
 
@@ -416,5 +417,47 @@ describe("parseKeywords", () => {
       expect(url).toContain("pws=0");
       expect(url).toContain("uule=w%2BCAIQICIVQmVybGluLEJlcmxpbixHZXJtYW55");
     }
+  });
+});
+
+describe("home country detection", () => {
+  it("maps time zones of every supported country to a code we offer", () => {
+    const offered = new Set(COUNTRIES.map((c) => c.code));
+    for (const [zone, code] of [
+      ["Europe/Prague", "CZ"],
+      ["Europe/Berlin", "DE"],
+      ["Europe/Rome", "IT"],
+      ["Europe/Warsaw", "PL"],
+      ["America/New_York", "US"],
+      ["America/Los_Angeles", "US"],
+      ["Asia/Tokyo", "JP"],
+      ["Australia/Perth", "AU"],
+      ["Atlantic/Canary", "ES"],
+    ] as [string, string][]) {
+      expect(countryFromTimeZone(zone), zone).toBe(code);
+      expect(offered.has(code), `${code} is not in the country table`).toBe(true);
+    }
+  });
+
+  it("handles the renamed Kyiv zone under both spellings", () => {
+    expect(countryFromTimeZone("Europe/Kyiv")).toBe("UA");
+    expect(countryFromTimeZone("Europe/Kiev")).toBe("UA");
+  });
+
+  it("returns undefined rather than guessing for unmapped or missing zones", () => {
+    expect(countryFromTimeZone("Antarctica/Troll")).toBeUndefined();
+    expect(countryFromTimeZone(undefined)).toBeUndefined();
+    expect(countryFromTimeZone("")).toBeUndefined();
+  });
+});
+
+describe("countryWithArticle", () => {
+  it("adds the article only where the name needs one", () => {
+    const byCode = (code: string) => COUNTRIES.find((c) => c.code === code)!;
+    expect(countryWithArticle(byCode("US"))).toBe("the United States");
+    expect(countryWithArticle(byCode("GB"))).toBe("the United Kingdom");
+    expect(countryWithArticle(byCode("NL"))).toBe("the Netherlands");
+    expect(countryWithArticle(byCode("CZ"))).toBe("Czechia");
+    expect(countryWithArticle(byCode("IT"))).toBe("Italy");
   });
 });
