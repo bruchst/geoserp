@@ -388,26 +388,24 @@ export default function Simulator() {
         )}
 
         {/* private window handoff */}
-        <div className="mt-6 border border-ink/15 bg-paper-inset/60 p-3">
-          <label className="flex cursor-pointer items-start gap-2.5">
-            <input
-              type="checkbox"
-              checked={privateMode}
-              onChange={(event) => setPrivateMode(event.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[color:var(--ink)]"
-            />
-            <span>
-              <span className="label">
-                Use {withArticle(hint?.modeName ?? "private window")}
-              </span>
-              <span className="mt-1 block text-sm text-muted">
-                A page cannot open one for you, browsers block that on purpose. Switch this on and the
-                button copies the URL and shows you the shortcut instead. It clears cookies and your
-                signed in state, but not your IP address.
-              </span>
+        <label className="mt-6 flex cursor-pointer items-baseline gap-2.5">
+          <input
+            type="checkbox"
+            checked={privateMode}
+            onChange={(event) => setPrivateMode(event.target.checked)}
+            className="h-4 w-4 shrink-0 translate-y-0.5 accent-[color:var(--ink)]"
+          />
+          <span className="text-sm text-muted">
+            <span className="label text-ink">
+              Use {withArticle(hint?.modeName ?? "private window")}
             </span>
-          </label>
-        </div>
+            <span className="label ml-2 border border-ink/25 px-1 text-muted">one step more</span>
+            <span className="mt-1 block">
+              Browsers do not let a page open one, so the button copies the URL and you paste it there
+              yourself.
+            </span>
+          </span>
+        </label>
 
         <button
           type="button"
@@ -415,7 +413,7 @@ export default function Simulator() {
           disabled={!ready}
           className="label mt-4 w-full border border-ink bg-accent px-4 py-4 transition hover:bg-ink hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-muted"
         >
-          {privateMode ? "Copy url for a private window" : "Open simulated google search →"}
+          {privateMode ? "Copy url for incognito →" : "Open in Google →"}
         </button>
 
         {privateMode && handoffReady && hint && (
