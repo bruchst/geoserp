@@ -75,6 +75,80 @@ export default function Home() {
 
       <Simulator />
 
+      {/* proof: what the same keyword returns in three countries */}
+      <section className="mt-14 border-t border-line pt-8">
+        <h2 className="font-display text-2xl font-bold tracking-tight">What this actually changes</h2>
+        <p className="mt-2 max-w-2xl text-muted">
+          One keyword, <span className="font-mono text-sm">project management software</span>, three
+          countries, measured on 2026-07-25 from the same machine. Highlighted hosts appear in that
+          country only.
+        </p>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {[
+            {
+              flag: "🇩🇪",
+              country: "Germany",
+              params: "google.de · gl=de · hl=de",
+              hosts: [
+                ["projektmagazin.de", true],
+                ["openproject.org", true],
+                ["asana.com", false],
+                ["fuer-gruender.de", true],
+                ["atlassian.com", false],
+              ] as [string, boolean][],
+            },
+            {
+              flag: "🇵🇱",
+              country: "Poland",
+              params: "google.pl · gl=pl · hl=pl",
+              hosts: [
+                ["icagile.com", false],
+                ["project-management.com", false],
+                ["flexi-project.com", true],
+                ["asana.com", false],
+                ["wrike.com", false],
+              ] as [string, boolean][],
+            },
+            {
+              flag: "🇺🇸",
+              country: "United States",
+              params: "google.com · gl=us · hl=en",
+              hosts: [
+                ["icagile.com", false],
+                ["project-management.com", false],
+                ["paymoapp.com", true],
+                ["microsoft.com", true],
+                ["wrike.com", false],
+              ] as [string, boolean][],
+            },
+          ].map((col) => (
+            <div key={col.country} className="border border-line bg-paper-raised p-4">
+              <p className="font-display text-lg font-bold">
+                <span aria-hidden className="mr-1.5">
+                  {col.flag}
+                </span>
+                {col.country}
+              </p>
+              <p className="mt-1 font-mono text-[10px] tracking-wide text-muted">{col.params}</p>
+              <ol className="mt-3 space-y-1.5">
+                {col.hosts.map(([host, unique], i) => (
+                  <li key={host} className="flex gap-2 font-mono text-[11px]">
+                    <span className="w-3 shrink-0 text-muted/60">{i + 1}</span>
+                    <span className={unique ? "bg-accent px-1 font-semibold" : "text-muted"}>
+                      {host}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-sm text-muted">
+          Three of five results differ between Germany and the United States for the same query. That
+          is the gap between what you see at your desk and what your market sees.
+        </p>
+      </section>
+
       {/* how it works */}
       <section className="mt-14 border-t border-line pt-8">
         <h2 className="font-display text-2xl font-bold tracking-tight">How it works</h2>

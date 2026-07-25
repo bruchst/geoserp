@@ -163,7 +163,7 @@ export default function Simulator() {
             if (event.key === "Enter") runSearch();
           }}
           placeholder="project management software"
-          className="mt-2 w-full border-b border-line bg-transparent pb-2 font-display text-2xl font-bold tracking-tight outline-none placeholder:text-muted/40 focus:border-ink focus-visible:outline-none sm:text-3xl"
+          className="mt-2 w-full border border-ink/25 bg-white px-4 py-3 font-display text-xl font-bold tracking-tight outline-none placeholder:font-body placeholder:text-base placeholder:font-normal placeholder:text-muted/50 focus:border-ink focus-visible:outline-none sm:text-2xl"
         />
 
         {/* EU quick pick, the part Google actually honours */}
@@ -172,40 +172,19 @@ export default function Simulator() {
             <span className="label text-muted">Country</span>
             <span className="label text-muted/70">sets gl, its language, its domain</span>
           </div>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5">
-            {EU_COUNTRIES.map((country) => {
-              const active = gl === country.gl;
-              return (
-                <button
-                  key={country.code}
-                  type="button"
-                  title={`${country.name}: ${country.domain}, hl=${country.hl}`}
-                  onClick={() => applyCountry(country)}
-                  className={`font-mono text-xs tracking-wide transition ${
-                    active ? "bg-accent px-1 font-semibold text-ink" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  {country.code}
-                </button>
-              );
-            })}
-            <span className="text-muted/50">|</span>
-            {COUNTRIES.filter((c) => !c.eu).map((country) => {
-              const active = gl === country.gl;
-              return (
-                <button
-                  key={country.code}
-                  type="button"
-                  title={`${country.name}: ${country.domain}, hl=${country.hl}`}
-                  onClick={() => applyCountry(country)}
-                  className={`font-mono text-xs tracking-wide transition ${
-                    active ? "bg-accent px-1 font-semibold text-ink" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  {country.code}
-                </button>
-              );
-            })}
+          <div className="mt-2 space-y-2">
+            <CountryRow
+              countries={EU_COUNTRIES}
+              activeGl={gl}
+              onPick={applyCountry}
+              caption="EU 27"
+            />
+            <CountryRow
+              countries={COUNTRIES.filter((c) => !c.eu)}
+              activeGl={gl}
+              onPick={applyCountry}
+              caption="Rest"
+            />
           </div>
         </div>
 
@@ -258,7 +237,7 @@ export default function Simulator() {
               autoComplete="off"
               spellCheck={false}
               placeholder="City,Region,Country"
-              className="w-full border-b border-line bg-transparent pb-2 font-mono text-sm outline-none focus:border-ink focus-visible:outline-none"
+              className="w-full border border-ink/25 bg-white px-4 py-3 font-mono text-sm outline-none focus:border-ink focus-visible:outline-none"
             />
             {suggestOpen && suggestions.length > 0 && (
               <ul className="absolute z-20 max-h-72 w-full overflow-auto border border-ink bg-paper-raised">
@@ -348,19 +327,23 @@ export default function Simulator() {
           </div>
           <div>
             <span className="label block text-muted">Results</span>
-            <div className="mt-2 flex gap-4 pb-2">
+            <div className="mt-2 flex">
               {(
                 [
                   { value: "organic", label: "Organic" },
                   { value: "local", label: "Local pack" },
                 ] as const
-              ).map((option) => (
+              ).map((option, i) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setMode(option.value)}
-                  className={`text-sm underline decoration-line underline-offset-4 hover:decoration-ink ${
-                    mode === option.value ? "font-bold decoration-ink" : "text-muted"
+                  className={`flex-1 border border-ink/25 px-2 py-2.5 font-mono text-xs transition ${
+                    i === 1 ? "border-l-0" : ""
+                  } ${
+                    mode === option.value
+                      ? "border-ink bg-accent font-semibold text-ink"
+                      : "bg-white text-muted hover:text-ink"
                   }`}
                 >
                   {option.label}
@@ -476,6 +459,47 @@ export default function Simulator() {
   );
 }
 
+function CountryRow({
+  countries,
+  activeGl,
+  onPick,
+  caption,
+}: {
+  countries: Country[];
+  activeGl: string;
+  onPick: (country: Country) => void;
+  caption: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="label mt-1.5 w-12 shrink-0 text-muted/60">{caption}</span>
+      <div className="flex flex-wrap gap-1">
+        {countries.map((country) => {
+          const active = activeGl === country.gl;
+          return (
+            <button
+              key={country.code}
+              type="button"
+              title={`${country.name}: ${country.domain}, hl=${country.hl}`}
+              onClick={() => onPick(country)}
+              className={`flex items-center gap-1 border px-1.5 py-1 font-mono text-xs transition ${
+                active
+                  ? "border-ink bg-accent font-semibold text-ink"
+                  : "border-transparent text-muted hover:border-ink/25 hover:text-ink"
+              }`}
+            >
+              <span aria-hidden className="text-sm leading-none">
+                {country.flag}
+              </span>
+              {country.code}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Select({
   id,
   value,
@@ -492,7 +516,7 @@ function Select({
       id={id}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="mt-2 w-full appearance-none border-b border-line bg-transparent pb-2 font-mono text-sm outline-none focus:border-ink focus-visible:outline-none"
+      className="mt-2 w-full appearance-none border border-ink/25 bg-white px-3 py-2.5 font-mono text-sm outline-none focus:border-ink focus-visible:outline-none"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
