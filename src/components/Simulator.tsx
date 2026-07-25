@@ -224,7 +224,7 @@ export default function Simulator() {
           onKeyDown={(event) => {
             if (event.key === "Enter") submitFromField();
           }}
-          placeholder="project management software, jira alternative"
+          placeholder="apple, easy eight, rohlik"
           className="mt-2 w-full border border-ink/25 bg-white px-4 py-3 font-display text-xl font-bold tracking-tight outline-none placeholder:font-body placeholder:text-base placeholder:font-normal placeholder:text-muted/50 focus:border-ink focus-visible:outline-none sm:text-2xl"
         />
         {multi && (
