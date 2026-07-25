@@ -20,9 +20,9 @@ const jetbrains = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
-const title = "GeoSERP: check Google rankings from any city";
+const title = "GeoSERP: see Google the way another country sees it";
 const description =
-  "Free tool that shows unpersonalized Google results from any city, in that country's own language. All 27 EU member states. No VPN, no extension, runs entirely in your browser.";
+  "Free tool that shows unpersonalized Google results on any country's own domain and in its own language. All 27 EU member states, plus a uule generator for SERP APIs. No VPN, no extension, runs in your browser.";
 
 export const metadata: Metadata = {
   title,
@@ -30,10 +30,11 @@ export const metadata: Metadata = {
   applicationName: "GeoSERP",
   keywords: [
     "google location changer",
-    "local serp checker",
+    "international serp checker",
     "uule generator",
-    "check rankings from another city",
+    "check rankings in another country",
     "geo targeted google search",
+    "gl hl parameters",
   ],
   openGraph: { title, description, type: "website", siteName: "GeoSERP" },
   twitter: { card: "summary_large_image", title, description },
