@@ -80,14 +80,6 @@ export const COUNTRIES: Country[] = [
 
 export const EU_COUNTRIES = COUNTRIES.filter((c) => c.eu);
 
-/** Country names that read as "the United States", not "United States". */
-const TAKES_THE = new Set(["US", "GB", "NL", "AE"]);
-
-/** Country name with its article, for use mid sentence. */
-export function countryWithArticle(country: Country): string {
-  return TAKES_THE.has(country.code) ? `the ${country.name}` : country.name;
-}
-
 const BY_CODE = new Map(COUNTRIES.map((c) => [c.code, c]));
 
 export function countryByCode(code: string | undefined): Country | undefined {

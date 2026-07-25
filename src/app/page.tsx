@@ -84,6 +84,23 @@ export default function Home() {
               </li>
             ))}
           </ul>
+
+          <div className="mt-8 border-l-2 border-accent pl-4 text-sm">
+            <p className="label">Cities: read this first</p>
+            <p className="mt-2 text-muted">
+              Google takes the <span className="font-mono text-xs">country</span> from the URL, but
+              the <span className="font-mono text-xs">city</span> from your IP address. So in the
+              country you are sitting in, you always get your own city and the city field cannot
+              override it. In every other country the location reads as unknown, which is the clean
+              case: national results, no city bias.
+            </p>
+            <p className="mt-2 text-muted">
+              Measured on 2026-07-25 from Prague: <span className="font-mono text-xs">gl=cz</span>{" "}
+              reported Holešovice, Praha 7 from the IP address,{" "}
+              <span className="font-mono text-xs">gl=it</span> reported Sconosciuta,{" "}
+              <span className="font-mono text-xs">gl=us</span> reported Unknown.
+            </p>
+          </div>
         </div>
 
         <Simulator />

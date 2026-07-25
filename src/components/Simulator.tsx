@@ -7,13 +7,11 @@ import {
   GOOGLE_DOMAINS,
   HOST_LANGUAGES,
   countryByCode,
-  countryWithArticle,
   type Country,
 } from "@/lib/countries";
 import { createLocationIndex, type Location } from "@/lib/locations";
 import { buildSearch, type SearchMode } from "@/lib/serpUrl";
 import { currentIncognitoHint, withArticle, type IncognitoHint } from "@/lib/incognito";
-import { detectHomeCountry } from "@/lib/homeCountry";
 import { MAX_KEYWORDS, parseKeywords } from "@/lib/keywords";
 import { resolveCanonical } from "@/lib/uule";
 import {
@@ -47,11 +45,9 @@ export default function Simulator() {
   const [privateMode, setPrivateMode] = useState(false);
   const [handoffReady, setHandoffReady] = useState(false);
   const [hint, setHint] = useState<IncognitoHint | null>(null);
-  const [homeCountry, setHomeCountry] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     setHint(currentIncognitoHint());
-    setHomeCountry(detectHomeCountry());
   }, []);
 
   const index = useMemo(() => createLocationIndex(), []);
@@ -122,11 +118,6 @@ export default function Simulator() {
 
   const localeMismatch =
     locationCountry && (locationCountry.gl !== gl || locationCountry.domain !== domain);
-
-  const selectedCountry = useMemo(() => COUNTRIES.find((c) => c.gl === gl), [gl]);
-  const searchingHomeCountry = Boolean(
-    homeCountry && selectedCountry && selectedCountry.code === homeCountry,
-  );
 
   const ready = searches.length > 0 && resolvedLocation.length > 0;
   const multi = searches.length > 1;
@@ -274,19 +265,6 @@ export default function Simulator() {
               caption="Rest"
             />
           </div>
-          {selectedCountry &&
-            (searchingHomeCountry ? (
-              <p className="mt-3 border-l-2 border-accent pl-3 text-sm">
-                <span className="font-bold">You are in {countryWithArticle(selectedCountry)}.</span> Google will pin
-                the search to your own city from your IP address, and the city field below cannot
-                override it. Expect results tilted toward where you sit.
-              </p>
-            ) : (
-              <p className="mt-3 text-sm text-muted">
-                Google will report the location as unknown, because your IP is not in{" "}
-                {countryWithArticle(selectedCountry)}. That is the clean case: national results with no city bias.
-              </p>
-            ))}
         </div>
 
         {/* location */}
