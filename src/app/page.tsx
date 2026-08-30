@@ -53,7 +53,7 @@ export default function Home() {
           <p className="font-display text-2xl font-extrabold tracking-tight">
             GEOSERP<span className="text-accent">.</span>
           </p>
-          <p className="label text-muted">Local SERP checker by sbruch.com</p>
+          <p className="label text-muted">SERP by country, keyword by keyword</p>
         </div>
         <div className="mt-4 border-t border-line" />
       </header>
@@ -65,9 +65,9 @@ export default function Home() {
             See Google the way another country sees it.
           </h1>
           <p className="mt-5 text-lg text-muted">
-            Pick a keyword and a country. You get an unpersonalized Google SERP on that
-            country&apos;s own domain, in its own language. All {EU_COUNTRIES.length} EU member
-            states, no VPN, no extension, no account.
+            Pick a keyword and a country and you get the SERP by country: an unpersonalized Google
+            result page on that country&apos;s own domain, in its own language. All{" "}
+            {EU_COUNTRIES.length} EU member states, no VPN, no extension, no account.
           </p>
           <ul className="mt-6 space-y-2 text-sm">
             {[
