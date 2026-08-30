@@ -25,7 +25,7 @@ const jetbrains = JetBrains_Mono({
 // source: Ahrefs Keywords Explorer, 2026-08-30) and carries the brand so
 // Google has a title signal for the site name. The narrative line stays on
 // Open Graph, where it reads better than a keyword-led title.
-const title = "Check SERP by Country for Any Keyword | GeoSERP";
+const title = "Free Google SERP by Country Keyword Checker | GeoSERP";
 const socialTitle = "GeoSERP: see Google the way another country sees it";
 const description =
   "See the SERP by country for any keyword: unpersonalized Google results on that country's own domain, in its own language. All 27 EU member states, plus a uule generator for SERP APIs. No VPN, no extension, runs in your browser.";
