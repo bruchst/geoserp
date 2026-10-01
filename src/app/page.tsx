@@ -1,5 +1,6 @@
 import BeforeAfter from "@/components/BeforeAfter";
 import Simulator from "@/components/Simulator";
+import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { EU_COUNTRIES } from "@/lib/countries";
 import stats from "@/lib/locations-stats.json";
 
@@ -43,20 +44,9 @@ const FAQ = [
 ];
 
 export default function Home() {
-  const version = stats.source.replace("geotargets-", "").replace(".csv", "");
-
   return (
     <div className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
-      {/* masthead */}
-      <header>
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-          <p className="font-display text-2xl font-extrabold tracking-tight">
-            GEOSERP<span className="text-accent">.</span>
-          </p>
-          <p className="label text-muted">SERP by country, keyword by keyword</p>
-        </div>
-        <div className="mt-4 border-t border-line" />
-      </header>
+      <SiteHeader current="/" />
 
       {/* hero: pitch left, tool right, both above the fold */}
       <section className="grid items-start gap-10 py-8 sm:py-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-12">
@@ -165,21 +155,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="mt-12 border-t border-line pt-6">
-        <p className="text-sm text-muted">
-          GeoSERP builds Google search URLs in your browser. It does not scrape Google, store your
-          queries, or use a paid SERP API. Locations from the Google Ads geotargets dataset, version{" "}
-          {version}.
-        </p>
-        <p className="label mt-4 text-muted">
-          <a
-            href="https://sbruch.com"
-            className="underline decoration-line underline-offset-4 hover:decoration-ink"
-          >
-            sbruch.com
-          </a>
-        </p>
-      </footer>
+      <SiteFooter />
 
       <script
         type="application/ld+json"

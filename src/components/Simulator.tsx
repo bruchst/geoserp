@@ -21,6 +21,17 @@ import {
   removeHistory,
   type HistoryEntry,
 } from "@/lib/history";
+import {
+  addWatch,
+  daysSinceCheck,
+  formatSince,
+  isDue,
+  isWatched,
+  loadWatchlist,
+  markChecked,
+  removeWatch,
+  type WatchEntry,
+} from "@/lib/watchlist";
 
 const CZ = countryByCode("CZ")!;
 
@@ -33,14 +44,25 @@ const POPULAR = [
   { label: "New York", canonical: "New York,New York,United States", country: "US" },
 ];
 
-export default function Simulator() {
+export default function Simulator({
+  initialCountry = "CZ",
+  placeholder = "apple, easy eight, rohlik",
+}: {
+  /** ISO code of the country preselected on load, e.g. "DE" on the German page */
+  initialCountry?: string;
+  placeholder?: string;
+}) {
+  const start = countryByCode(initialCountry) ?? CZ;
   const [keyword, setKeyword] = useState("");
-  const [location, setLocation] = useState(CZ.capital);
-  const [domain, setDomain] = useState(CZ.domain);
-  const [hl, setHl] = useState(CZ.hl);
-  const [gl, setGl] = useState(CZ.gl);
+  const [location, setLocation] = useState(start.capital);
+  const [domain, setDomain] = useState(start.domain);
+  const [hl, setHl] = useState(start.hl);
+  const [gl, setGl] = useState(start.gl);
   const [mode, setMode] = useState<SearchMode>("organic");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchEntry[]>([]);
+  // Set on mount only, so server and client render the same markup.
+  const [now, setNow] = useState<number | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [privateMode, setPrivateMode] = useState(false);
   const [handoffReady, setHandoffReady] = useState(false);
@@ -82,6 +104,8 @@ export default function Simulator() {
 
   useEffect(() => {
     setHistory(loadHistory());
+    setWatchlist(loadWatchlist());
+    setNow(Date.now());
   }, []);
 
   const { canonical: resolvedLocation, verified: isCanonical } = useMemo(
@@ -179,6 +203,29 @@ export default function Simulator() {
     [resolvedLocation, domain, gl, hl, mode],
   );
 
+  const target = useCallback(
+    (kw: string) => ({ keyword: kw, location: resolvedLocation, domain, gl, hl, mode }),
+    [resolvedLocation, domain, gl, hl, mode],
+  );
+
+  const unwatched = searches.filter((s) => !isWatched(watchlist, target(s.keyword)));
+
+  const watchAll = useCallback(() => {
+    setWatchlist((current) => {
+      let next = current;
+      for (const [i, s] of [...searches].reverse().entries()) {
+        next = addWatch(
+          next,
+          target(s.keyword),
+          Date.now(),
+          `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+        );
+      }
+      return next;
+    });
+    setNow(Date.now());
+  }, [searches, target]);
+
   /**
    * Incognito is the only path that still needs a handler: a page cannot open a
    * private window, so it hands the URLs over through the clipboard instead.
@@ -224,7 +271,7 @@ export default function Simulator() {
           onKeyDown={(event) => {
             if (event.key === "Enter") submitFromField();
           }}
-          placeholder="apple, easy eight, rohlik"
+          placeholder={placeholder}
           className="mt-2 w-full border border-ink/25 bg-white px-4 py-3 font-display text-xl font-bold tracking-tight outline-none placeholder:font-body placeholder:text-base placeholder:font-normal placeholder:text-muted/50 focus:border-ink focus-visible:outline-none sm:text-2xl"
         />
         {multi && (
@@ -505,6 +552,23 @@ export default function Simulator() {
           </div>
         )}
 
+        {ready && (
+          <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            {unwatched.length > 0 ? (
+              <button
+                type="button"
+                onClick={watchAll}
+                className="label text-ink underline decoration-ink/40 underline-offset-4 hover:decoration-ink"
+              >
+                + Add {multi ? `${unwatched.length} to` : "to"} watchlist
+              </button>
+            ) : (
+              <span className="label text-muted">✓ On your watchlist</span>
+            )}
+            <span className="text-xs text-muted">Re-check the same SERP later in one click.</span>
+          </div>
+        )}
+
         {privateMode && handoffReady && hint && (
           <div className="mt-3 border border-ink bg-accent p-4">
             <p className="label">URL copied</p>
@@ -557,6 +621,68 @@ export default function Simulator() {
           </div>
         </div>
       </div>
+
+      {/* watchlist */}
+      {watchlist.length > 0 && (
+        <div>
+          <div className="flex items-baseline justify-between gap-2 border-b border-ink pb-2">
+            <span className="label">Watchlist</span>
+            <span className="label text-muted">this browser only</span>
+          </div>
+          <ul>
+            {watchlist.map((entry) => {
+              const url = buildSearch(entry).url;
+              const days = now === null ? null : daysSinceCheck(entry, now);
+              const due = now !== null && isDue(entry, now);
+              return (
+                <li
+                  key={entry.id}
+                  className="group flex items-center justify-between gap-3 border-b border-line/60 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate">
+                      {entry.keyword}
+                      {due && (
+                        <span className="label ml-2 bg-accent px-1 py-0.5 text-ink">due</span>
+                      )}
+                    </p>
+                    <p className="font-mono text-xs text-muted">
+                      {entry.domain} · {entry.hl}
+                      {entry.mode === "local" ? " · local" : ""}
+                      {days !== null ? ` · ${formatSince(days)}` : ""}
+                    </p>
+                  </div>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      const at = Date.now();
+                      setWatchlist((current) => markChecked(current, entry.id, at));
+                      setNow(at);
+                    }}
+                    className="label shrink-0 border border-ink px-2.5 py-1.5 transition hover:bg-ink hover:text-accent"
+                  >
+                    Check again →
+                  </a>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${entry.keyword} from watchlist`}
+                    onClick={() => setWatchlist((current) => removeWatch(current, entry.id))}
+                    className="label shrink-0 text-muted transition hover:text-ink sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    ✕
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-xs text-muted">
+            GeoSERP does not record positions. It reopens the identical unpersonalized SERP, so you
+            compare it with what you saw last time.
+          </p>
+        </div>
+      )}
 
       {/* history */}
       {history.length > 0 && (

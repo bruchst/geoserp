@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 
-// Single-page tool: the simulator lives entirely on "/" (country and query are
-// client state, not routes), so the sitemap has exactly one entry.
+// The simulator itself is client state on "/"; every other entry is a
+// keyword landing page that embeds it with a preset market.
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
@@ -10,6 +10,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 1,
+    },
+    {
+      url: `${SITE_URL}/german-serp-tracking`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
     },
   ];
 }
